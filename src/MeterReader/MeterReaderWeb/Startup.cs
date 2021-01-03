@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MeterReaderLib;
 using MeterReaderWeb.Data;
+using MeterReaderWeb.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -45,6 +46,8 @@ namespace MeterReaderWeb
       services.AddRazorPages();
 
       services.AddScoped<IReadingRepository, ReadingRepository>();
+
+      services.AddGrpc(opt => { opt.EnableDetailedErrors = true; });   // Added for gRPC
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -70,6 +73,8 @@ namespace MeterReaderWeb
 
       app.UseEndpoints(endpoints =>
       {
+          endpoints.MapGrpcService<MeterService>();  // Added for gRPC
+
         endpoints.MapControllerRoute(
                   name: "default",
                   pattern: "{controller=Home}/{action=Index}/{id?}");
