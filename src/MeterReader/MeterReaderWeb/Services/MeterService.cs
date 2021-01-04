@@ -49,6 +49,17 @@ namespace MeterReaderWeb.Services
                 {
                     foreach (var r in request.Readings)
                     {
+                        if (r.ReadingValue < 1000)
+                        {
+                            _logger.LogDebug("Reading Value below acceptable level");
+                            var trailer = new Metadata()
+                            {
+                                {"BadValue", r.ReadingValue.ToString() },
+                                {"Field", "ReadingValue" },
+                                {"Message", "Readings are invalid" }
+                            };
+                            throw new RpcException(new Status(StatusCode.OutOfRange, "Value too low"), trailer);
+                        }
                         // Save to database
                         var reading = new MeterReading()
                         {
@@ -66,10 +77,14 @@ namespace MeterReaderWeb.Services
                         result.Success = ReadingStatus.Success;
                     }
                 }
+                catch (RpcException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    result.Message = "Exception thrown during process.";
                     _logger.LogError($"Exception thrown during saving of reading: {ex}");
+                    throw new RpcException(Status.DefaultCancelled, "Exception thrown during process.");
                 }
             }
 

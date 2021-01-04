@@ -9,6 +9,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using MeterReaderWeb.Services;
 using Microsoft.Extensions.Configuration;
+using Grpc.Core;
 
 namespace MeterReaderClient
 {
@@ -79,16 +80,26 @@ namespace MeterReaderClient
                 {
                     pkt.Readings.Add(await _factory.Generate(customerId));
                 }
-
-               var result = await Client.AddReadingAsync(pkt);
-               if (result.Success == ReadingStatus.Success)
-               {
-                   _logger.LogInformation("Successfully sent");
-               }
-               else
-               {
-                   _logger.LogInformation("Failed to send");
-               }
+                try
+                {
+                    var result = await Client.AddReadingAsync(pkt);
+                    if (result.Success == ReadingStatus.Success)
+                    {
+                        _logger.LogInformation("Successfully sent");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Failed to send");
+                    }
+                } 
+                catch (RpcException ex)
+                {
+                    if (ex.StatusCode == StatusCode.OutOfRange)
+                    {
+                        _logger.LogError($"{ex.Trailers}");
+                    }
+                    _logger.LogError($"Exception Thrown: {ex}");
+                }
                 
                 await Task.Delay(_config.GetValue<int>("Service:DelayInterval"), stoppingToken);
             }
