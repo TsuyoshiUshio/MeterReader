@@ -18,12 +18,14 @@ namespace MeterReaderClient
         private readonly IConfiguration _config;
         private readonly ReadingFactory _factory;
         private MeterReadingService.MeterReadingServiceClient _client = null;
-
-        public Worker(ILogger<Worker> logger, IConfiguration config, ReadingFactory factory)
+        private ILoggerFactory _loggerFactory;
+        public Worker(ILogger<Worker> logger, IConfiguration config, ReadingFactory factory, ILoggerFactory loggerFactory)
         {
             _logger = logger;
             _config = config;
             _factory = factory;
+            _loggerFactory = loggerFactory;
+
         }
 
         protected MeterReadingService.MeterReadingServiceClient Client
@@ -32,7 +34,11 @@ namespace MeterReaderClient
             {
                 if (_client == null)
                 {
-                    var channel = GrpcChannel.ForAddress(_config["Service:ServerUrl"]);
+                    var opt = new GrpcChannelOptions()
+                    {
+                        LoggerFactory = _loggerFactory
+                    };
+                    var channel = GrpcChannel.ForAddress(_config["Service:ServerUrl"], opt);
                     _client = new MeterReadingService.MeterReadingServiceClient(channel);
                 }
 
