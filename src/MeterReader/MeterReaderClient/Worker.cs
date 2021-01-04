@@ -20,6 +20,9 @@ namespace MeterReaderClient
         private readonly ReadingFactory _factory;
         private MeterReadingService.MeterReadingServiceClient _client = null;
         private ILoggerFactory _loggerFactory;
+        private string _token;
+        private DateTime _expiration = DateTime.MinValue;
+
         public Worker(ILogger<Worker> logger, IConfiguration config, ReadingFactory factory, ILoggerFactory loggerFactory)
         {
             _logger = logger;
@@ -47,6 +50,8 @@ namespace MeterReaderClient
             }
         }
 
+        protected bool NeedsLogin() => string.IsNullOrWhiteSpace(_token) || _expiration > DateTime.UtcNow;
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var counter = 0;
@@ -54,20 +59,20 @@ namespace MeterReaderClient
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                counter++;
+                //counter++;
 
-                if (counter % 10 == 0)
-                {
-                    Console.WriteLine("Sending Diagnostics");
-                    var stream = Client.SendDiagnostics();
-                    for (var x = 0; x < 5; x++)
-                    {
-                        var reading = await _factory.Generate(customerId);
-                        await stream.RequestStream.WriteAsync(reading);
-                    }
+                //if (counter % 10 == 0)
+                //{
+                //    Console.WriteLine("Sending Diagnostics");
+                //    var stream = Client.SendDiagnostics();
+                //    for (var x = 0; x < 5; x++)
+                //    {
+                //        var reading = await _factory.Generate(customerId);
+                //        await stream.RequestStream.WriteAsync(reading);
+                //    }
 
-                    await stream.RequestStream.CompleteAsync();
-                }
+                //    await stream.RequestStream.CompleteAsync();
+                //}
 
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
                var pkt = new ReadingPacket()
@@ -82,16 +87,22 @@ namespace MeterReaderClient
                 }
                 try
                 {
-                    var result = await Client.AddReadingAsync(pkt);
-                    if (result.Success == ReadingStatus.Success)
+                    if (!NeedsLogin() || await GenerateToken())
                     {
-                        _logger.LogInformation("Successfully sent");
+                        var headers = new Metadata();
+                        headers.Add("Authorization", $"Bearer {_token}");
+
+                        var result = await Client.AddReadingAsync(pkt, headers: headers);
+                        if (result.Success == ReadingStatus.Success)
+                        {
+                            _logger.LogInformation("Successfully sent");
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Failed to send");
+                        }
                     }
-                    else
-                    {
-                        _logger.LogInformation("Failed to send");
-                    }
-                } 
+                }
                 catch (RpcException ex)
                 {
                     if (ex.StatusCode == StatusCode.OutOfRange)
@@ -103,6 +114,24 @@ namespace MeterReaderClient
                 
                 await Task.Delay(_config.GetValue<int>("Service:DelayInterval"), stoppingToken);
             }
+        }
+
+        private async Task<bool> GenerateToken()
+        {
+            var request = new TokenRequest()
+            {
+                Username = _config["Service:Username"],
+                Password = _config["Service:Password"]
+            };
+
+            var response = await Client.CreateTokenAsync(request);
+            if (response.Success)
+            {
+                _token = response.Token;
+                _expiration = response.Expiration.ToDateTime();
+                return true;
+            }
+            return false;
         }
     }
 }
