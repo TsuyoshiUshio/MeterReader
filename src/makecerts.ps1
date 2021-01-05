@@ -6,7 +6,7 @@ $cert = New-SelfSignedCertificate -Type Custom -KeySpec Signature `
 -FriendlyName "MeterRootCert" `
 -KeyExportPolicy Exportable `
 -HashAlgorithm sha256 -KeyLength 4096 `
--CertStoreLocation "cert:\LocalMachine\My" `
+-CertStoreLocation "Cert:\CurrentUser\My" `
 -KeyUsageProperty Sign `
 -KeyUsage CertSign `
 -NotAfter (Get-Date).AddYears(5)
@@ -18,7 +18,7 @@ $clientCert = New-SelfSignedCertificate -Type Custom -KeySpec Signature `
 -FriendlyName "MeterClientCert" `
 -HashAlgorithm sha256 -KeyLength 2048 `
 -NotAfter (Get-Date).AddMonths(24) `
--CertStoreLocation "cert:\LocalMachine\My" `
+-CertStoreLocation "Cert:\CurrentUser\My" `
 -Signer $cert -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.2")
 
 # TLS Cert
@@ -30,7 +30,7 @@ $webCert = New-SelfSignedCertificate -Type Custom `
 -HashAlgorithm sha256 -KeyLength 2048 `
 -KeyUsage "KeyEncipherment", "DigitalSignature" `
 -NotAfter (Get-Date).AddMonths(24) `
--CertStoreLocation "cert:\LocalMachine\My" `
+-CertStoreLocation "Cert:\CurrentUser\My" `
 -Signer $cert
 
 $PFXPass = ConvertTo-SecureString -String "P@ssw0rd!" -Force -AsPlainText
