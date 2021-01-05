@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MeterReaderLib;
 using MeterReaderWeb.Data;
 using MeterReaderWeb.Services;
+using Microsoft.AspNetCore.Authentication.Certificate;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -37,9 +38,9 @@ namespace MeterReaderWeb
               })
               .AddCertificate(opt =>
               {
-                  opt.AllowedCertificateTypes = Microsoft.AspNetCore.Authentication.Certificate.CertificateTypes.SelfSigned;
+                  opt.AllowedCertificateTypes = CertificateTypes.Chained;
                   opt.RevocationMode = X509RevocationMode.NoCheck; // Just for development
-                  opt.Events = new Microsoft.AspNetCore.Authentication.Certificate.CertificateAuthenticationEvents()
+                  opt.Events = new CertificateAuthenticationEvents()
                   {
                       OnCertificateValidated = ctx =>
                       {

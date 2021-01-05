@@ -10,6 +10,8 @@ using Grpc.Net.Client;
 using MeterReaderWeb.Services;
 using Microsoft.Extensions.Configuration;
 using Grpc.Core;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Http;
 
 namespace MeterReaderClient
 {
@@ -38,8 +40,15 @@ namespace MeterReaderClient
             {
                 if (_client == null)
                 {
+                    var cert = new X509Certificate2(_config["Service:CertFileName"],
+                        _config["Service:CertPassword"]);
+                    var handler = new HttpClientHandler();
+                    handler.ClientCertificates.Add(cert);
+
+                    var client = new HttpClient(handler);
                     var opt = new GrpcChannelOptions()
                     {
+                        HttpClient = client,
                         LoggerFactory = _loggerFactory
                     };
                     var channel = GrpcChannel.ForAddress(_config["Service:ServerUrl"], opt);
@@ -87,12 +96,12 @@ namespace MeterReaderClient
                 }
                 try
                 {
-                    if (!NeedsLogin() || await GenerateToken())
-                    {
-                        var headers = new Metadata();
-                        headers.Add("Authorization", $"Bearer {_token}");
-
-                        var result = await Client.AddReadingAsync(pkt, headers: headers);
+                    //if (!NeedsLogin() || await GenerateToken())
+                    //{
+                    //    var headers = new Metadata();
+                    //    headers.Add("Authorization", $"Bearer {_token}");
+                    var client = Client;
+                    var result = await client.AddReadingAsync(pkt); // , headers: headers);
                         if (result.Success == ReadingStatus.Success)
                         {
                             _logger.LogInformation("Successfully sent");
@@ -101,7 +110,7 @@ namespace MeterReaderClient
                         {
                             _logger.LogInformation("Failed to send");
                         }
-                    }
+                    //}
                 }
                 catch (RpcException ex)
                 {

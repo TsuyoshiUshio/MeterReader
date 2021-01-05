@@ -46,7 +46,7 @@
 
   <ItemGroup>
     <None Update="meterwebcert.pfx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
